@@ -3,6 +3,7 @@
 #include "hash.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #define LARGO_INICIAL 27
 #define VARIACION 2
@@ -30,13 +31,23 @@ struct hash_iter {
 // Método de hasheo elegido. Se suman todos los valores del string hasta el octavo caracter
 // (o el último de medir la clave menos), y se devuelve el módulo de esa suma con el tamaño del vector que almacena los valores.
 int hashear_clave(const hash_t* hash, char* clave){
-	int num = 0, i, len, cant;
+	int num = 0, i, len, tam;
+
+	#pragma GCC diagnostic push
+	#pragma GCC diagnostic ignored "-Wsign-conversion" // Igual se va a hacer positivo despues
 	len = strlen(clave);
 	tam = vector_obtener_tamanio(hash->vector);
+
 	for (i=0; (i<8) && (i<len); i++){
 		num += clave[i];
 	}
+	#pragma GCC diagnostic pop
+
+	if (num < 0)
+		num *= (-1);
+
 	num %= tam;
+
 	return num;
 }
 
@@ -46,14 +57,14 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
 	if (hash == NULL)
 		return NULL;
 	
-	vector = vector_crear(LARGO_INICIAL);
+	vector_t* vector = vector_crear(LARGO_INICIAL);
 	if (vector == NULL){
 		free (hash);
 		return NULL;
 	}
 
-	for (int i = 0; i<vector_obtener_tamanio(hash->vector); i++){
-		hash->vector[i] = NULL;
+	for (int i = 0; i < vector_obtener_tamanio(vector); i++){
+		vector->datos[i] = NULL;
 	}
 	
 	hash->vector = vector;
@@ -73,17 +84,19 @@ bool hash_pertenece(const hash_t *hash, const char *clave){
 
 	char clave_truncada[LARGO_MAX_CLAVE];
 	strncpy(clave_truncada, clave, LARGO_MAX_CLAVE);
-	pos = hashear_clave(hash, clave_truncada);
+	int pos = hashear_clave(hash, clave_truncada);
 
-	if (hash->vector[pos] == NULL)
+	if (hash->vector->datos[pos] == NULL)
 		return false;
 	else {
-		lista_iter_t* iter = lista_iter_crear(hash->vector[pos]);
+		lista_iter_t* iter = lista_iter_crear(hash->vector->datos[pos]);
 		if (iter == NULL){
 			return false;
 		}
+		nodo_hash_t* nodo_actual;
 		while (!lista_iter_al_final(iter)){
-			if (strcmp(lista_iter_ver_actual(iter)->clave, clave_truncada) == 0){
+			nodo_actual = lista_iter_ver_actual(iter);
+			if (strcmp(nodo_actual->clave, clave_truncada) == 0){
 				lista_iter_destruir(iter);
 				return true;
 			} else {
@@ -99,10 +112,10 @@ bool hash_pertenece(const hash_t *hash, const char *clave){
 bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 	char clave_truncada[LARGO_MAX_CLAVE];
 	strncpy(clave_truncada, clave, LARGO_MAX_CLAVE);
-	pos = hashear_clave(hash, clave_truncada);
-	if (hash->vector[pos] == NULL){
-		hash->vector[pos] = lista_crear();
-		if (hash->vector[pos] == NULL){
+	int pos = hashear_clave(hash, clave_truncada);
+	if (hash->vector->datos[pos] == NULL){
+		hash->vector->datos[pos] = lista_crear();
+		if (hash->vector->datos[pos] == NULL){
 			return false;
 		}
 		nodo_hash_t* nuevo_dato = malloc(sizeof(nodo_hash_t));
@@ -112,7 +125,7 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 		strcpy(nuevo_dato->clave, clave_truncada);
 		nuevo_dato->dato = dato;
 
-		if (lista_insertar_ultimo(hash->vector[pos], nuevo_dato)){
+		if (lista_insertar_ultimo(hash->vector->datos[pos], nuevo_dato)){
 			return true;
 		} else {
 			free(nuevo_dato);
@@ -120,17 +133,19 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 		}
 
 	} else {
-		lista_iter_t* iter = lista_iter_crear(hash->vector[pos]);
+		lista_iter_t* iter = lista_iter_crear(hash->vector->datos[pos]);
 		if (iter == NULL){
 			return false;
 		}
 
 		bool encontrado = false;
+		nodo_hash_t* nodo_actual;
 
 		while ((!encontrado) && (!lista_iter_al_final(iter))){
-			if (strcmp(lista_iter_ver_actual(iter)->clave, clave_truncada) == 0){
+			nodo_actual = lista_iter_ver_actual(iter);
+			if (strcmp(nodo_actual->clave, clave_truncada) == 0){
 				encontrado = true;
-				lista_iter_ver_actual(iter)->dato = dato;
+				nodo_actual->dato = dato;
 			} else {
 				lista_iter_avanzar(iter);
 			}
@@ -144,7 +159,7 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 			}
 			strcpy(nuevo_dato->clave, clave_truncada);
 			nuevo_dato->dato = dato;
-			lista_insertar_ultimo(hash->vector[pos], nuevo_dato);
+			lista_insertar_ultimo(hash->vector->datos[pos], nuevo_dato);
 		}
 		lista_iter_destruir(iter);
 		return true;
@@ -155,21 +170,22 @@ void *hash_borrar(hash_t *hash, const char *clave){
 
 	char clave_truncada[LARGO_MAX_CLAVE];
 	strncpy(clave_truncada, clave, LARGO_MAX_CLAVE);
-	pos = hashear_clave(hash, clave_truncada);
+	int pos = hashear_clave(hash, clave_truncada);
 
-	if (hash->vector[pos] == NULL)
+	if (hash->vector->datos[pos] == NULL)
 		return NULL;
 	else {
-		lista_iter_t* iter = lista_iter_crear(hash->vector[pos]);
+		lista_iter_t* iter = lista_iter_crear(hash->vector->datos[pos]);
 		if (iter == NULL){
 			return NULL;
 		}
-
+		nodo_hash_t* nodo_actual;
 		while (!lista_iter_al_final(iter)){
-			if (strcmp(lista_iter_ver_actual(iter)->clave, clave_truncada) == 0){
-				elem = (lista_borrar(hash->vector[pos], iter));
+			nodo_actual = lista_iter_ver_actual(iter);
+			if (strcmp(nodo_actual->clave, clave_truncada) == 0){
+				nodo_hash_t* elem = (lista_borrar(hash->vector->datos[pos], iter));
 				lista_iter_destruir(iter);
-				dato = elem->dato;
+				void* dato = elem->dato;
 				free(elem);
 				return dato;
 			} else {
