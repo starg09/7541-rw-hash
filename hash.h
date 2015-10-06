@@ -27,7 +27,7 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato);
 
 /* Borra un elemento del hash y devuelve el dato asociado.  Devuelve
  * NULL si el dato no estaba.
- * Pre: La estructura hash fue inicializada. La clave no supera los 50 caracteres de longitud (se ignora lo que le siga).
+ * Pre: La estructura hash fue inicializada.
  * Post: El elemento fue borrado de la estructura y se lo devolvió,
  * en el caso de que estuviera guardado.
  */
