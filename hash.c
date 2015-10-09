@@ -43,24 +43,25 @@ char* strdup (const char* s) {
 // (o el último de medir la clave menos), y se devuelve el módulo de esa suma con el tamaño del vector que almacena los valores.
 unsigned int hashear_clave(const hash_t* hash, const char* clave){
 
-	unsigned int num, tam, tempval;
+	size_t tam;
+	unsigned int num, tam_ui, tempval;
+	unsigned char tempch;
 	int i;
 	
-	#pragma GCC diagnostic push
-	#pragma GCC diagnostic ignored "-Wsign-conversion" // Igual va a ser positivo.
-	
+
 	num = 0;
 	tam = vector_obtener_tamanio(hash->vector);
+	tam_ui = 0 + tam;
 	i = 0;
 	
 	while ((i < 50) && (i < strlen(clave))){
-		tempval = (clave[i] < 0) ? -clave[i] : clave[i];
+		tempch = (unsigned char)clave[i];
+		tempval = tempch;
 		num += tempval;
 		i++;
 	}
-	#pragma GCC diagnostic pop
 
-	return num % tam;
+	return num % tam_ui;
 }
 
 
