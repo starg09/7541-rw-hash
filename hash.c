@@ -46,12 +46,13 @@ unsigned int hashear_clave(const hash_t* hash, const char* clave){
 	unsigned int num, tam, tempval;
 	int i;
 	
+	#pragma GCC diagnostic push
+	#pragma GCC diagnostic ignored "-Wsign-conversion" // Igual va a ser positivo.
+	
 	num = 0;
 	tam = vector_obtener_tamanio(hash->vector);
 	i = 0;
 	
-	#pragma GCC diagnostic push
-	#pragma GCC diagnostic ignored "-Wsign-conversion" // Igual va a ser positivo.
 	while ((i < 50) && (i < strlen(clave))){
 		tempval = (clave[i] < 0) ? -clave[i] : clave[i];
 		num += tempval;
