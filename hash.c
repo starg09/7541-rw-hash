@@ -41,10 +41,10 @@ char* strdup (const char* s) {
 
 // Método de hasheo elegido. Se suman todos los valores del string hasta el octavo caracter
 // (o el último de medir la clave menos), y se devuelve el módulo de esa suma con el tamaño del vector que almacena los valores.
-unsigned int hashear_clave(const hash_t* hash, const char* clave){
+size_t hashear_clave(const hash_t* hash, const char* clave){
 
-	size_t tam;
-	unsigned int num, tempval;
+	size_t tam, num;
+	unsigned int tempval;
 	unsigned char tempch;
 	int i;
 	
@@ -94,7 +94,7 @@ bool hash_pertenece(const hash_t *hash, const char *clave){
 	if (hash->cantidad == 0)
 		return false;
 
-	unsigned int pos = hashear_clave(hash, clave);
+	size_t pos = hashear_clave(hash, clave);
 
 	if (hash->vector->datos[pos] == NULL)
 		return false;
@@ -121,7 +121,7 @@ bool hash_pertenece(const hash_t *hash, const char *clave){
 
 bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 
-	unsigned int pos = hashear_clave(hash, clave);
+	size_t pos = hashear_clave(hash, clave);
 
 	if (hash->vector->datos[pos] == NULL){
 		
@@ -212,7 +212,7 @@ void *hash_borrar(hash_t *hash, const char *clave){
 	if (hash->cantidad == 0)
 		return NULL;
 
-	unsigned int pos = hashear_clave(hash, clave);
+	size_t pos = hashear_clave(hash, clave);
 
 	if (hash->vector->datos[pos] == NULL)
 		return NULL;
@@ -250,7 +250,7 @@ void *hash_obtener(const hash_t *hash, const char *clave){
 	if (hash->cantidad == 0)
 		return NULL;
 
-	unsigned int pos = hashear_clave(hash, clave);
+	size_t pos = hashear_clave(hash, clave);
 
 	if (hash->vector->datos[pos] == NULL)
 		return NULL;
