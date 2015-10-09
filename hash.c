@@ -44,14 +44,13 @@ char* strdup (const char* s) {
 unsigned int hashear_clave(const hash_t* hash, const char* clave){
 
 	size_t tam;
-	unsigned int num, tam_ui, tempval;
+	unsigned int num, tempval;
 	unsigned char tempch;
 	int i;
 	
 
 	num = 0;
 	tam = vector_obtener_tamanio(hash->vector);
-	tam_ui = 0 + tam;
 	i = 0;
 	
 	while ((i < 50) && (i < strlen(clave))){
@@ -61,7 +60,7 @@ unsigned int hashear_clave(const hash_t* hash, const char* clave){
 		i++;
 	}
 
-	return num % tam_ui;
+	return num % tam;
 }
 
 
