@@ -381,7 +381,7 @@ const char *hash_iter_ver_actual(const hash_iter_t *iter){
 }
 
 bool hash_iter_al_final(const hash_iter_t *iter){
-	if ((iter->cantidad_actual == 0) || (iter->cantidad_actual < iter->recorridos) || (iter->act == NULL))
+	if ((iter->cantidad_actual == 0) || (iter->cantidad_actual < iter->recorridos))
 		return true;
 	return false;
 }
@@ -476,32 +476,10 @@ bool hash_redimensionar(hash_t* hash, size_t tam){
 
 		if (iter->act != temp_liter){
 			// Usada ubicación directa porque con función no salía. Revisar que funcione bien
-			//printf("%d - %p\n", pos, hash->vector->datos[pos]);
 			cola_encolar(cola_pos, hash->vector->datos[pos]);
 			pos = iter->pos_actual;
 			temp_liter = iter->act;
 		}
-
-		/*cola_encolar(cola_datos, lista_iter_ver_actual(temp_liter));
-
-		lista_iter_avanzar(temp_liter);
-		i++;
-
-		if (lista_iter_al_final(temp_liter)){
-			temp_pos = malloc(sizeof(size_t));
-			if (temp_pos == NULL){
-				cola_destruir(cola_datos, NULL);
-				cola_destruir(cola_pos, free);
-				cola_destruir(cola_undo, free);
-				hash_iter_destruir(iter);
-				return false;
-			}	
-			*temp_pos = iter->pos_actual;
-			cola_encolar(cola_pos, temp_pos);
-			hash_iter_avanzar(iter);
-			temp_liter = iter->act;
-			vector_obtener(hash->vector, *temp_pos, temp_lista);
-		}*/
 	}
 
 	hash_iter_destruir(iter);
@@ -515,7 +493,7 @@ bool hash_redimensionar(hash_t* hash, size_t tam){
 	while (!cola_esta_vacia(cola_datos)){
 		nodo_temp = cola_desencolar(cola_datos);
 		clave_hasheada_temp = hashear_clave(tam, nodo_temp->clave);
-		vector_obtener(hash->vector, clave_hasheada_temp, nueva_lista_temp);
+		nueva_lista_temp = hash->vector->datos[clave_hasheada_temp];
 		if (nueva_lista_temp == NULL){
 			nueva_lista_temp = lista_crear();
 			if (nueva_lista_temp == NULL){
@@ -531,7 +509,6 @@ bool hash_redimensionar(hash_t* hash, size_t tam){
 	cola_destruir(cola_datos, NULL);
 
 	while(!cola_esta_vacia(cola_pos)){
-		//printf("%p\n", cola_desencolar(cola_pos));
 		lista_destruir(cola_desencolar(cola_pos), NULL);
 	}
 	cola_destruir(cola_pos, NULL);
