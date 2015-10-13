@@ -154,6 +154,7 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 
 		if (lista_insertar_ultimo(hash->vector->datos[pos], nuevo_dato)){
 			hash->cantidad++;
+			hash_revisar_redimensionamiento(hash);
 			return true;
 		} else {
 			free(nuevo_dato->clave);
@@ -205,6 +206,7 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 
 		if (lista_insertar_ultimo(hash->vector->datos[pos], nuevo_dato)){
 			hash->cantidad++;
+			hash_revisar_redimensionamiento(hash);
 			return true;
 		} else {
 			free(nuevo_dato);
@@ -311,7 +313,7 @@ hash_iter_t *hash_iter_crear(const hash_t *hash){
 	hiter->cantidad_actual = hash->cantidad;
 
 	//Se inicializa de tener elementos
-	if (hash->cantidad > 0) {
+	if (hiter->cantidad_actual > 0) {
 		size_t i = 0;
 		lista_iter_t* tempact = NULL;
 
@@ -341,14 +343,12 @@ bool hash_iter_avanzar(hash_iter_t *iter){
 			lista_iter_destruir(iter->act);
 			iter->act = tempact;
 			iter->pos_actual = i;
-			iter->recorridos++;
 			return true;
 		} else {
 			return false;
 		}
 	} else if (lista_iter_avanzar(iter->act)) {
 		iter->recorridos++;
-
 		if (lista_iter_al_final(iter->act)) {
 			size_t i = iter->pos_actual + 1;
 			lista_iter_t* tempact = NULL;
@@ -357,7 +357,6 @@ bool hash_iter_avanzar(hash_iter_t *iter){
 				lista_iter_destruir(iter->act);
 				iter->act = tempact;
 				iter->pos_actual = i;
-				iter->recorridos++;
 				return true;
 			} else {
 				return false;
@@ -382,7 +381,7 @@ const char *hash_iter_ver_actual(const hash_iter_t *iter){
 }
 
 bool hash_iter_al_final(const hash_iter_t *iter){
-	if ((iter->cantidad_actual == 0) || (iter->cantidad_actual < iter->recorridos))
+	if ((iter->cantidad_actual == 0) || (iter->cantidad_actual < iter->recorridos) || (iter->act == NULL))
 		return true;
 	return false;
 }
@@ -432,12 +431,10 @@ bool hash_redimensionar(hash_t* hash, size_t tam){
 
 	size_t i = 0;
 	size_t clave_hasheada_temp;
-	lista_iter_t* temp_liter;
-	lista_t* temp_lista;
-	lista_t* nueva_lista_temp;
-	lista_t* lista_undo_temp;
-	nodo_hash_t* nodo_temp;
-	size_t* temp_pos;
+	size_t pos;
+	lista_iter_t* temp_liter = NULL;
+	lista_t* nueva_lista_temp = NULL;
+	nodo_hash_t* nodo_temp = NULL;
 
 	// Cola de los nodos a reubicar en el nuevo vector.
 	cola_t* cola_datos = cola_crear();
@@ -446,29 +443,46 @@ bool hash_redimensionar(hash_t* hash, size_t tam){
 
 	// Cola de posiciones ocupadas del vector original, para limpiar mas rápido después
 	cola_t* cola_pos = cola_crear();
-	if (cola_pos == NULL)
+	if (cola_pos == NULL){
 		cola_destruir(cola_datos, NULL);
 		return false;
+	}
 
 	// Cola de posiciones ocupadas del nuevo vector, para deshacer en caso de error.
 	cola_t* cola_undo = cola_crear();
-	if (cola_undo == NULL)
+	if (cola_undo == NULL){
 		cola_destruir(cola_datos, NULL);
-		cola_destruir(cola_pos, free);
+		cola_destruir(cola_pos, NULL);
 		return false;
+	}
 
 	hash_iter_t* iter = hash_iter_crear(hash);
 	if (iter == NULL){
 		cola_destruir(cola_datos, NULL);
-		cola_destruir(cola_pos, free);
+		cola_destruir(cola_pos, NULL);
 		cola_destruir(cola_undo, free);
 		return false;
 	}
 
 	temp_liter = iter->act;
+	pos = iter->pos_actual;
 
 	while (!hash_iter_al_final(iter)){
-		cola_encolar(cola_datos, lista_iter_ver_actual(temp_liter));
+		if (iter->act != NULL)
+			cola_encolar(cola_datos, lista_iter_ver_actual(iter->act));
+
+		hash_iter_avanzar(iter);
+		i++;
+
+		if (iter->act != temp_liter){
+			// Usada ubicación directa porque con función no salía. Revisar que funcione bien
+			//printf("%d - %p\n", pos, hash->vector->datos[pos]);
+			cola_encolar(cola_pos, hash->vector->datos[pos]);
+			pos = iter->pos_actual;
+			temp_liter = iter->act;
+		}
+
+		/*cola_encolar(cola_datos, lista_iter_ver_actual(temp_liter));
 
 		lista_iter_avanzar(temp_liter);
 		i++;
@@ -485,60 +499,43 @@ bool hash_redimensionar(hash_t* hash, size_t tam){
 			*temp_pos = iter->pos_actual;
 			cola_encolar(cola_pos, temp_pos);
 			hash_iter_avanzar(iter);
+			temp_liter = iter->act;
 			vector_obtener(hash->vector, *temp_pos, temp_lista);
-		}
+		}*/
 	}
+
 	hash_iter_destruir(iter);
 
 
-	vector_t* nuevo_vec = vector_crear(tam);
-	if (nuevo_vec == NULL){
-				cola_destruir(cola_datos, NULL);
-				cola_destruir(cola_pos, free);
-				cola_destruir(cola_undo, free);
-				return false;
+	vector_redimensionar(hash->vector, tam);
+	for (i=0; i<tam; i++){
+		hash->vector->datos[i] = NULL;
 	}
 
 	while (!cola_esta_vacia(cola_datos)){
 		nodo_temp = cola_desencolar(cola_datos);
 		clave_hasheada_temp = hashear_clave(tam, nodo_temp->clave);
-		vector_obtener(nuevo_vec, clave_hasheada_temp, nueva_lista_temp);
+		vector_obtener(hash->vector, clave_hasheada_temp, nueva_lista_temp);
 		if (nueva_lista_temp == NULL){
 			nueva_lista_temp = lista_crear();
 			if (nueva_lista_temp == NULL){
 				cola_destruir(cola_datos, NULL);
-				cola_destruir(cola_pos, free);
-				while (!cola_esta_vacia(cola_undo)){
-					temp_pos = cola_desencolar(cola_undo);
-					// No debería ser NULL, pero por si acaso
-					if (temp_pos != NULL){
-						vector_obtener(nuevo_vec, *temp_pos, lista_undo_temp);
-						lista_destruir(lista_undo_temp, NULL);
-						free(temp_pos);
-					}	
-				}
+				cola_destruir(cola_pos, NULL);
 				cola_destruir(cola_undo, free);
 				return false;
 			}
+			vector_guardar(hash->vector, clave_hasheada_temp, nueva_lista_temp);
 		}
 		lista_insertar_ultimo(nueva_lista_temp, nodo_temp);
 	}
 	cola_destruir(cola_datos, NULL);
 
 	while(!cola_esta_vacia(cola_pos)){
-		temp_pos = cola_desencolar(cola_pos);
-		// No debería ser NULL, pero por si acaso
-		if (temp_pos != NULL){
-			vector_obtener(hash->vector, *temp_pos, temp_lista);
-			lista_destruir(temp_lista, NULL);
-			free(temp_pos);
-		}
+		//printf("%p\n", cola_desencolar(cola_pos));
+		lista_destruir(cola_desencolar(cola_pos), NULL);
 	}
-	vector_destruir(hash->vector);
-	cola_destruir(cola_pos, free);
+	cola_destruir(cola_pos, NULL);
 	cola_destruir(cola_undo, free);
-
-	hash->vector = nuevo_vec;
 
 	return true;
 }
