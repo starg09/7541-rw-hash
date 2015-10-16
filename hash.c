@@ -45,7 +45,7 @@ char* strdup (const char* s) {
 // (o el último de medir la clave menos), y se devuelve el módulo de esa suma con el tamaño del vector que almacena los valores.
 size_t hashear_clave(size_t tam, const char* clave){
 
-	size_t num;
+	size_t num, len;
 	unsigned int tempval;
 	unsigned char tempch;
 	int i;
@@ -53,8 +53,9 @@ size_t hashear_clave(size_t tam, const char* clave){
 
 	num = 0;
 	i = 0;
+	len = strlen(clave);
 	
-	while ((i < 50) && (i < strlen(clave))){
+	while ((i < 50) && (i < len)){
 		tempch = (unsigned char)clave[i];
 		tempval = tempch;
 		num += tempval;
