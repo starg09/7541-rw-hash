@@ -41,7 +41,8 @@ char* strdup (const char* s) {
 	return dup;
 }
 
-// Método de hasheo elegido.
+// Método de hasheo elegido. Se suman todos los valores del string hasta el octavo caracter
+// (o el último de medir la clave menos), y se devuelve el módulo de esa suma con el tamaño del vector que almacena los valores.
 size_t hashear_clave(size_t tam, const char* clave) { 
 
     unsigned char* tempstr;
